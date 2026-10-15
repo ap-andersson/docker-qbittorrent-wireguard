@@ -103,6 +103,24 @@ iptables -P INPUT DROP
 # set policy to drop ipv6 for input
 ip6tables -P INPUT DROP
 
+# drop input to qBittorrent webui port from tunnel adapter, it should only be reachable via "${docker_interface}"
+iptables -A INPUT -i "${VPN_DEVICE_TYPE}" -p tcp --dport 8080 -j DROP
+ip6tables -A INPUT -i "${VPN_DEVICE_TYPE}" -p tcp --dport 8080 -j DROP
+
+# drop input to additional ports from tunnel adapter
+if [[ ! -z "${ADDITIONAL_PORTS}" ]]; then
+	# split comma separated string into list from ADDITIONAL_PORTS env variable
+	IFS=',' read -ra additional_port_list <<<"${ADDITIONAL_PORTS}"
+
+	for additional_port_item in "${additional_port_list[@]}"; do
+		# strip whitespace from start and end of additional_port_item
+		additional_port_item=$(echo "${additional_port_item}" | sed -e 's~^[ \t]*~~;s~[ \t]*$~~')
+
+		iptables -A INPUT -i "${VPN_DEVICE_TYPE}" -p tcp --dport "${additional_port_item}" -j DROP
+		ip6tables -A INPUT -i "${VPN_DEVICE_TYPE}" -p tcp --dport "${additional_port_item}" -j DROP
+	done
+fi
+
 # accept input to tunnel adapter
 iptables -A INPUT -i "${VPN_DEVICE_TYPE}" -j ACCEPT
 
